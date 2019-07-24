@@ -74,3 +74,8 @@ config :phoenix, :stacktrace_depth, 20
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
+
+config :peerage,
+  via: Peerage.Via.List,
+  node_list: [:"el_kube@127.0.0.1"],
+  log_results: false
