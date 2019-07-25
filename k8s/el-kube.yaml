@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: el-kube-deployment
+  labels:
+    app: el-kube
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: el-kube
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 34%
+      maxUnavailable: 34%
+  template:
+    metadata:
+      name: el-kube
+      labels:
+        app: el-kube
+    spec:
+      containers:
+      - name: el-kube
+        image: el_kube:latest
+        imagePullPolicy: Never
+        env:
+          - name: APP_HOST
+            value: el-kube.com
+          - name: DB_URL
+            value: ecto://postgres:postgres@db/el_kube_prod
+          - name: HOSTNAME
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: PORT
+            value: "4000"
+          - name: RELEASE_COOKIE
+            value: el-kube-secret-cookie
+          - name: SECRET_KEY_BASE
+            value: super-secret-key-base
+          - name: SERVICE_NAME
+            value: el-kube.default.svc.cluster.local
+        resources: {}
+        securityContext:
+          privileged: false
+          procMount: Default
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
