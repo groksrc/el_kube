@@ -1,13 +1,21 @@
 # How To Set up an Auto Scaling Elixir Cluster
+This project is designed to show you how to create an auto-scaling elixir cluster using Elixir 1.9 and Kubernetes. Each branch of the project is designed to follow the [slide deck](https://docs.google.com/presentation/d/1xN2Mi_Q-TfwGHNnJ3OczKTvhq_bFyOcMNBa1H4NPMak/edit?usp=sharing) of the associated presentation.
+
+The branches are ordered from 01-22 so that you can easily see what is changed at each step. If a branch is missing it's because that slide contained only commands, not code changes. This README also covers a summary of what is done top to bottom.
 
 ## Part 1 - Creating the App
-### new project
-$ mix phx.new your_project
+### New the project
+From the working directory on your local development machine
+```
+$ mix phx.new el_kube
+```
+### Open the project
+I am using [vscode](https://code.visualstudio.com/)
+```
+$ cd el_kube && code .
+```
 
-### open project
-cd your_project && code .
-
-### edit mix.exs
+### Edit mix.exs
 #### update project key to 1.9
 `elixir: "~> 1.9",`
 
@@ -22,7 +30,7 @@ cd your_project && code .
 ```
 
 #### add dependencies
-Add peerage
+Add [peerage](https://github.com/mrluc/peerage)
 ```
   defp deps do
     [
@@ -40,12 +48,14 @@ Add peerage
     ]
   end
 ```
-Run `mix deps.get` if necessary
+Don't forget to `$ mix deps.get` if necessary
 
-### initialize the release
-mix release.init
+### Initialize the release
+```
+$ mix release.init
+```
 
-#### update rel/env.sh.eex
+#### Update rel/env.sh.eex
 Uncomment RELEASE_DISTRIBUTION and RELEASE_NODE and change the localhost IP to an environment variable
 
 ```
@@ -53,15 +63,15 @@ export RELEASE_DISTRIBUTION=name
 export RELEASE_NODE=<%= @release.name %>@${HOSTNAME}
 ```
 
-#### delete config/prod.secret.exs
+#### Delete config/prod.secret.exs
 This file won't be used
 
 $ rm config/prod.secret.exs
 
-#### create config/releases.exs
+#### Create config/releases.exs
 $ touch config/releases.exs
 
-#### edit config/releases.exs
+#### Edit config/releases.exs
 ```
 import Config
 
@@ -70,71 +80,80 @@ db_url = System.fetch_env!("DB_URL")
 secret_key_base = System.fetch_env!("SECRET_KEY_BASE")
 port = System.fetch_env!("PORT")
 
-config :your_project, YourProject.Repo, url: db_url
+config :el_kube, YourProject.Repo, url: db_url
 
-config :your_project, YourProjectWeb.Endpoint,
+config :el_kube, YourProjectWeb.Endpoint,
   http: [port: port],
   secret_key_base: secret_key_base,
   url: [host: {:system, "APP_HOST"}, port: {:system, "PORT"}]
 
 config :peerage, via: Peerage.Via.Dns,
   dns_name: service_name,
-  app_name: "your_project"
+  app_name: "el_kube"
 
 ```
 
-### edit config/prod.exs
-#### Configure Phoenix to run in production
+#### Edit config/prod.exs
+#### Configure Phoenix
 1. Remove the url key from the endpoint config
 2. Add endpoint config key/value `server: true`
-3. Remove the import_config "prod.secret.exs"
+#### Drop the import to prod.secret.exs
+3. Remove the import_config "prod.secret.exs" at the bottom of config/prod.exs
 
 
-### edit config/config.exs
+### Edit config/config.exs
 #### Add your ecto database settings
+This demonstrates how you can put base values in the config and layer on top with the environment specific configs
 ```
-config :your_project, YourProject.Repo,
+config :el_kube, YourProject.Repo,
   adapter: Ecto.Adapters.Postgres,
   pool_size: 10
 ```
 
-### edit config/dev.exs
+### Edit config/dev.exs
 #### Configure Peerage
+So that it will run quietly in development
 ```
 config :peerage,
   via: Peerage.Via.List,
-  node_list: [:"your_project@127.0.0.1"],
+  node_list: [:"el_kube@127.0.0.1"],
   log_results: false
 ```
 
 ### Compile
 #### Generate the digest
+```
 $ mix phx.digest
+```
 
 #### Generate the release
+```
 $ MIX_ENV=prod mix release
+```
 
 ### Create a test database
+```
 $ mix ecto.create
-
-
+```
 
 ### Test Run
 #### Run the release
 Console 1:
 ```
-DB_URL=ecto://postgres:postgres@localhost/your_project_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 SERVICE_NAME=localhost.svc APP_HOST=localhost PORT=4000 _build/prod/rel/your_project/bin/your_project start
+DB_URL=ecto://postgres:postgres@localhost/el_kube_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 SERVICE_NAME=localhost.svc APP_HOST=localhost PORT=4000 _build/prod/rel/el_kube/bin/el_kube start
 ```
 
 You should now be able to open http://localhost:4000
 
-#### To test Ecto
-Console 2:
+#### Test Ecto connectivity
+The `:ok` tuple indicates success.
+
+From Console 2:
 ```
-DB_URL=ecto://postgres:postgres@localhost/your_project_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 PORT=4000 MIX_ENV=prod SERVICE_NAME=localhost.svc APP_HOST=localhost _build/prod/rel/your_project/bin/your_project remote
+DB_URL=ecto://postgres:postgres@localhost/el_kube_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 PORT=4000 MIX_ENV=prod SERVICE_NAME=localhost.svc APP_HOST=localhost _build/prod/rel/el_kube/bin/el_kube remote
 
 Interactive Elixir (1.8.1) - press Ctrl+C to exit (type h() ENTER for help)
-iex(your_project@127.0.0.1)1> Ecto.Adapters.SQL.query(YourProject.Repo, "Select 1 as testing")
+iex(el_kube@127.0.0.1)1> Ecto.Adapters.SQL.query(YourProject.Repo, "Select 1 as testing")
 17:34:23.041 [debug] QUERY OK db=0.3ms queue=0.6ms
 Select 1 as testing []
 {:ok,
@@ -146,7 +165,7 @@ Select 1 as testing []
    num_rows: 1,
    rows: [[1]]
  }}
-iex(your_project@127.0.0.1)2>
+iex(el_kube@127.0.0.1)2>
 ```
 
 ## Part 2 - Dockerizing the App
@@ -157,7 +176,7 @@ FROM elixir:1.9.0-alpine AS builder
 
 ENV MIX_ENV=prod
 
-WORKDIR /usr/local/your_project
+WORKDIR /usr/local/el_kube
 
 # This step installs all the build tools we'll need
 RUN apk update \
@@ -185,7 +204,7 @@ RUN cd assets \
 # Build Release
 RUN mkdir -p /opt/release \
     && mix release \
-    && mv _build/${MIX_ENV}/rel/your_project /opt/release
+    && mv _build/${MIX_ENV}/rel/el_kube /opt/release
 
 # Create the runtime container
 FROM erlang:22-alpine as runtime
@@ -195,11 +214,11 @@ RUN apk update \
     && apk upgrade --no-cache \
     && apk add --no-cache gcc
 
-WORKDIR /usr/local/your_project
+WORKDIR /usr/local/el_kube
 
-COPY --from=builder /opt/release/your_project .
+COPY --from=builder /opt/release/el_kube .
 
-CMD [ "bin/your_project", "start" ]
+CMD [ "bin/el_kube", "start" ]
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=2 \
  CMD nc -vz -w 2 localhost 4000 || exit 1
@@ -225,14 +244,17 @@ README.md
 ```
 
 ### Build the container
-$ docker build -t your_project:latest .
+```
+$ docker build -t el_kube:latest .
+```
 
 ### Testing the container in docker
 #### Start the container
-$ docker network create your-project-net
-$ docker run --rm -d -h db -e POSTGRES_DB=your_project_prod -p 5432 --name db --network your-project-net postgres:9.6
-$ docker run -it --rm -e DB_URL=ecto://postgres:postgres@db/your_project_prod -e RELEASE_COOKIE=secret-cookie -e SERVICE_NAME=your-project -e SECRET_KEY_BASE=foo -e PORT=4000 -e APP_HOST=localhost -p 4000 --network your-project-net --publish 4000:4000 your_project:latest
-
+```
+$ docker network create el-kube-net
+$ docker run --rm -d -h db -e POSTGRES_DB=el_kube_prod -p 5432 --name db --network el-kube-net postgres:9.6
+$ docker run -it --rm -e DB_URL=ecto://postgres:postgres@db/el_kube_prod -e RELEASE_COOKIE=secret-cookie -e SERVICE_NAME=el-kube -e SECRET_KEY_BASE=foo -e PORT=4000 -e APP_HOST=localhost -p 4000 --network el-kube-net --publish 4000:4000 el_kube:latest
+```
 <!--
 ### Run the container
 ```
@@ -259,14 +281,17 @@ $ docker-compose up
 -->
 
 #### Test the container
+```
 $ curl http://localhost:4000
-$ # you should get back some html
-
+# you should get back some html and a 200
+```
 ## Part 3 - Deploying to k8s
 ### Create your k8s config files
+The filename is in the comment at the top of the yaml file.
 #### Create a directory for your k8s config
+```
 $ mkdir k8s
-
+```
 #### Create a Persistent Volume Claim
 ```
 # k8s/pvc.yaml
@@ -358,8 +383,10 @@ spec:
 ```
 
 #### Build the container on minikube
+```
 $ eval $(minikube docker-env)
 $ docker build -t el_kube:latest .
+```
 
 #### Create the el_kube deployment
 ```
@@ -421,6 +448,7 @@ spec:
 ```
 
 ### Check your work
+```
 $ kubectl exec -it el-kube-deployment-<hash> sh
 /usr/local/el_kube # bin/el_kube remote
 Erlang/OTP 22 [erts-10.4.4] [source] [64-bit] [smp:2:2] [ds:2:2:10] [async-threads:1] [hipe]
@@ -434,11 +462,14 @@ iex(el_kube@172.17.0.9)2> ElKube.Repo.query("select 1 as testing")
    columns: ["testing"],
    command: :select
 ...
+```
 
 ### Grow your cluster
+```
 $ # update the number of replicas to 5 in k8s/el-kube.yaml
 $ kubectl apply -f k8s/el-kube.yaml
 deployment.apps/el-kube-deployment configured
 $ k exec -it el-kube-deployment-zzzzz sh
 iex(el_kube@172.17.0.9)1> Node.list
 [:"el_kube@172.17.0.7", :"el_kube@172.17.0.8", :"el_kube@172.17.0.11", :"el_kube@172.17.0.10"]
+```
