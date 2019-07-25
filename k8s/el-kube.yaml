@@ -5,7 +5,7 @@ metadata:
   labels:
     app: el-kube
 spec:
-  replicas: 3
+  replicas: 5
   selector:
     matchLabels:
       app: el-kube
