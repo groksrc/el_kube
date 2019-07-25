@@ -23,7 +23,7 @@ $ cd el_kube && code .
 ```
   def application do
     [
-      mod: {YourProject.Application, []},
+      mod: {ElKube.Application, []},
       extra_applications: [:logger, :runtime_tools, :peerage]
     ]
   end
@@ -65,11 +65,14 @@ export RELEASE_NODE=<%= @release.name %>@${HOSTNAME}
 
 #### Delete config/prod.secret.exs
 This file won't be used
-
+```
 $ rm config/prod.secret.exs
+```
 
 #### Create config/releases.exs
+```
 $ touch config/releases.exs
+```
 
 #### Edit config/releases.exs
 ```
@@ -80,9 +83,9 @@ db_url = System.fetch_env!("DB_URL")
 secret_key_base = System.fetch_env!("SECRET_KEY_BASE")
 port = System.fetch_env!("PORT")
 
-config :el_kube, YourProject.Repo, url: db_url
+config :el_kube, ElKube.Repo, url: db_url
 
-config :el_kube, YourProjectWeb.Endpoint,
+config :el_kube, ElKubeWeb.Endpoint,
   http: [port: port],
   secret_key_base: secret_key_base,
   url: [host: {:system, "APP_HOST"}, port: {:system, "PORT"}]
@@ -105,7 +108,7 @@ config :peerage, via: Peerage.Via.Dns,
 #### Add your ecto database settings
 This demonstrates how you can put base values in the config and layer on top with the environment specific configs
 ```
-config :el_kube, YourProject.Repo,
+config :el_kube, ElKube.Repo,
   adapter: Ecto.Adapters.Postgres,
   pool_size: 10
 ```
@@ -153,7 +156,7 @@ From Console 2:
 DB_URL=ecto://postgres:postgres@localhost/el_kube_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 PORT=4000 MIX_ENV=prod SERVICE_NAME=localhost.svc APP_HOST=localhost _build/prod/rel/el_kube/bin/el_kube remote
 
 Interactive Elixir (1.8.1) - press Ctrl+C to exit (type h() ENTER for help)
-iex(el_kube@127.0.0.1)1> Ecto.Adapters.SQL.query(YourProject.Repo, "Select 1 as testing")
+iex(el_kube@127.0.0.1)1> Ecto.Adapters.SQL.query(ElKube.Repo, "Select 1 as testing")
 17:34:23.041 [debug] QUERY OK db=0.3ms queue=0.6ms
 Select 1 as testing []
 {:ok,
