@@ -362,26 +362,45 @@ spec:
 $ kubectl create -f k8s/db-svc.yaml
 ```
 
-#### Create the el_kube service
+#### Create the el_kube private and public services
 ```
-# k8s/el-kube-svc.yaml
+# k8s/el-kube-private-svc.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: el-kube
+  name: el-kube-private
 spec:
   clusterIP: None
-  selector:
-    app: el-kube
   ports:
-  - name: http
-    port: 4000
   - name: epmd
     port: 4369
+  selector:
+    app: el-kube
+
 ```
 
 ```
-$ kubectl create -f k8s/el-kube-svc.yaml
+$ kubectl create -f k8s/el-kube-private-svc.yaml
+```
+
+```
+# k8s/el-kube-public-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: el-kube-public
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 4000
+  selector:
+    app: el-kube
+  type: LoadBalancer
+```
+
+```
+$ kubectl create -f k8s/el-kube-public-svc.yaml
 ```
 
 #### push the container image to the minikube cache
