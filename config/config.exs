@@ -10,6 +10,10 @@ use Mix.Config
 config :el_kube,
   ecto_repos: [ElKube.Repo]
 
+config :your_project, ElKube.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  pool_size: 10
+
 # Configures the endpoint
 config :el_kube, ElKubeWeb.Endpoint,
   url: [host: "localhost"],

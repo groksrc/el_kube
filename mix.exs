@@ -5,7 +5,7 @@ defmodule ElKube.MixProject do
     [
       app: :el_kube,
       version: "0.1.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -20,7 +20,7 @@ defmodule ElKube.MixProject do
   def application do
     [
       mod: {ElKube.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :peerage]
     ]
   end
 
@@ -42,7 +42,8 @@ defmodule ElKube.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
-      {:plug_cowboy, "~> 2.0"}
+      {:plug_cowboy, "~> 2.0"},
+      {:peerage, "~> 1.0"}
     ]
   end
 

@@ -33,5 +33,10 @@ npm-debug.log
 # this depending on your deployment strategy.
 /priv/static/
 
+<<<<<<< HEAD
 # vscode ElixirLS plugin
 .elixir_ls/
+=======
+# vscode ElixirLS
+.elixir_ls
+>>>>>>> 22_create_the_el_kube_deployment
