@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: db
@@ -6,6 +6,9 @@ spec:
   replicas: 1
   strategy:
     type: Recreate
+  selector:
+    matchLabels:
+      app: postgresql
   template:
     metadata:
       creationTimestamp: null
@@ -30,4 +33,3 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: postgres-pvc
-

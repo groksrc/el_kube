@@ -1,11 +1,19 @@
 # How To Set up an Auto Scaling Elixir Cluster
 This project is designed to show you how to create an auto-scaling elixir cluster using Elixir 1.9 and Kubernetes. Each branch of the project is designed to follow the [slide deck](https://docs.google.com/presentation/d/1xN2Mi_Q-TfwGHNnJ3OczKTvhq_bFyOcMNBa1H4NPMak/edit?usp=sharing) of the associated presentation.
 
-The branches are ordered from 01-22 so that you can easily see what is changed at each step. If a branch is missing it's because that slide contained only commands, not code changes. This README also covers a summary of what is done top to bottom.
+The branches are ordered from 00-22 so that you can easily see what is changed at each step. If a branch is missing it's because that slide contained only commands, not code changes. This README also covers a summary of what is done top to bottom.
+
+```
+IMPORTANT:
+
+The master branch was updated 01/2020 to reflect the latest changes. I won't be going
+through the old branches to update each of those. You can assume that any changes
+here should also be applied there as well. This branch reflects the final output.
+```
 
 ## Part 1 - Creating the App
 ### New the project
-From the working directory on your local development machine
+From the working directory on your local development machine. Answer `Y`es to install dependencies.
 ```
 $ mix phx.new el_kube
 ```
@@ -34,10 +42,10 @@ Add [peerage](https://github.com/mrluc/peerage)
 ```
   defp deps do
     [
-      {:phoenix, "~> 1.4.6"},
+      {:phoenix, "~> 1.4.9"},
       {:phoenix_pubsub, "~> 1.1"},
       {:phoenix_ecto, "~> 4.0"},
-      {:ecto_sql, "~> 3.0"},
+      {:ecto_sql, "~> 3.1"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 2.11"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
@@ -100,9 +108,9 @@ config :peerage, via: Peerage.Via.Dns,
 #### Configure Phoenix
 1. Remove the url key from the endpoint config
 2. Add endpoint config key/value `server: true`
+
 #### Drop the import to prod.secret.exs
 3. Remove the import_config "prod.secret.exs" at the bottom of config/prod.exs
-
 
 ### Edit config/config.exs
 #### Add your ecto database settings
@@ -143,7 +151,7 @@ $ mix ecto.create
 #### Run the release
 Console 1:
 ```
-DB_URL=ecto://postgres:postgres@localhost/el_kube_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 SERVICE_NAME=localhost.svc APP_HOST=localhost PORT=4000 _build/prod/rel/el_kube/bin/el_kube start
+DB_URL=psql://postgres:postgres@localhost/el_kube_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 SERVICE_NAME=localhost.svc APP_HOST=localhost PORT=4000 _build/prod/rel/el_kube/bin/el_kube start
 ```
 
 You should now be able to open http://localhost:4000
@@ -153,7 +161,7 @@ The `:ok` tuple indicates success.
 
 From Console 2:
 ```
-DB_URL=ecto://postgres:postgres@localhost/el_kube_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 PORT=4000 MIX_ENV=prod SERVICE_NAME=localhost.svc APP_HOST=localhost _build/prod/rel/el_kube/bin/el_kube remote
+DB_URL=psql://postgres:postgres@localhost/el_kube_dev RELEASE_COOKIE=foo SECRET_KEY_BASE=foo HOSTNAME=127.0.0.1 PORT=4000 MIX_ENV=prod SERVICE_NAME=localhost.svc APP_HOST=localhost _build/prod/rel/el_kube/bin/el_kube remote
 
 Interactive Elixir (1.8.1) - press Ctrl+C to exit (type h() ENTER for help)
 iex(el_kube@127.0.0.1)1> Ecto.Adapters.SQL.query(ElKube.Repo, "Select 1 as testing")
@@ -175,21 +183,17 @@ iex(el_kube@127.0.0.1)2>
 ### Create the Dockerfile and .dockerignore
 #### Dockerfile
 ```
-FROM elixir:1.9.0-alpine AS builder
+FROM elixir:1.9 AS builder
 
 ENV MIX_ENV=prod
 
 WORKDIR /usr/local/el_kube
 
 # This step installs all the build tools we'll need
-RUN apk update \
-    && apk upgrade --no-cache \
-    && apk add --no-cache \
-      nodejs-npm \
-      alpine-sdk \
-      openssl-dev \
-    && mix local.rebar --force \
-    && mix local.hex --force
+RUN curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
+    apt-get install -y nodejs && \
+    mix local.rebar --force && \
+    mix local.hex --force
 
 # Copies our app source code into the build container
 COPY . .
@@ -210,12 +214,7 @@ RUN mkdir -p /opt/release \
     && mv _build/${MIX_ENV}/rel/el_kube /opt/release
 
 # Create the runtime container
-FROM erlang:22-alpine as runtime
-
-# Install runtime dependencies
-RUN apk update \
-    && apk upgrade --no-cache \
-    && apk add --no-cache gcc
+FROM erlang:22 as runtime
 
 WORKDIR /usr/local/el_kube
 
@@ -256,32 +255,12 @@ $ docker build -t el_kube:latest .
 ```
 $ docker network create el-kube-net
 $ docker run --rm -d -h db -e POSTGRES_DB=el_kube_prod -p 5432 --name db --network el-kube-net postgres:9.6
-$ docker run -it --rm -e DB_URL=ecto://postgres:postgres@db/el_kube_prod -e RELEASE_COOKIE=secret-cookie -e SERVICE_NAME=el-kube -e SECRET_KEY_BASE=foo -e PORT=4000 -e APP_HOST=localhost -p 4000 --network el-kube-net --publish 4000:4000 el_kube:latest
+$ docker run -it --rm -e DB_URL=psql://postgres:postgres@db/el_kube_prod -e RELEASE_COOKIE=secret-cookie -e SERVICE_NAME=el-kube -e SECRET_KEY_BASE=foo -e PORT=4000 -e APP_HOST=localhost -p 4000 --network el-kube-net --publish 4000:4000 el_kube:latest
 ```
-<!--
-### Run the container
-```
-# docker-compose.yaml
-version: '3.5'
-
-services:
-  myapp:
-    image: myapp:latest
-    container_name: myapp
-    env_file: docker.env
-    depends_on:
-      - db
-    ports:
-      - "4000:4000"
-
-  db:
-    image: postgres:9.6
-    container_name: db
-    environment:
-      POSTGRES_DB: myapp_dev
+OR
 ```
 $ docker-compose up
--->
+```
 
 #### Test the container
 ```
@@ -295,7 +274,7 @@ The filename is in the comment at the top of the yaml file.
 ```
 $ mkdir k8s
 ```
-#### Create a Persistent Volume Claim
+#### Create a Persistent Volume Claim file
 ```
 # k8s/pvc.yaml
 kind: PersistentVolumeClaim
@@ -312,10 +291,15 @@ spec:
       storage: 1Gi
 ```
 
+#### Create a Persistent Volume Claim
+```
+$ kubectl create -f k8s/pvc.yaml
+```
+
 #### Create the db using the PVC
 ```
 # k8s/db.yaml
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: db
@@ -323,6 +307,9 @@ spec:
   replicas: 1
   strategy:
     type: Recreate
+  selector:
+    matchLabels:
+      app: postgresql
   template:
     metadata:
       creationTimestamp: null
@@ -349,6 +336,10 @@ spec:
             claimName: postgres-pvc
 ```
 
+```
+$ kubectl create -f k8s/db.yaml
+```
+
 #### Create the db service
 ```
 # k8s/db-svc.yaml
@@ -365,6 +356,10 @@ spec:
     targetPort: 5432
   selector:
     app: postgresql
+```
+
+```
+$ kubectl create -f k8s/db-svc.yaml
 ```
 
 #### Create the el_kube service
@@ -385,10 +380,13 @@ spec:
     port: 4369
 ```
 
-#### Build the container on minikube
 ```
-$ eval $(minikube docker-env)
-$ docker build -t el_kube:latest .
+$ kubectl create -f k8s/el-kube-svc.yaml
+```
+
+#### push the container image to the minikube cache
+```
+$ minikube cache add el_kube:latest
 ```
 
 #### Create the el_kube deployment
@@ -467,12 +465,16 @@ iex(el_kube@172.17.0.9)2> ElKube.Repo.query("select 1 as testing")
 ...
 ```
 
+```
+$ minikube service el-kube-public
+```
+
 ### Grow your cluster
 ```
-$ # update the number of replicas to 5 in k8s/el-kube.yaml
-$ kubectl apply -f k8s/el-kube.yaml
-deployment.apps/el-kube-deployment configured
-$ k exec -it el-kube-deployment-zzzzz sh
+$ kubectl scale deployment el-kube-deployment --replicas 5
+deployment.apps/el-kube-deployment scaled
+$ k exec -it el-kube-deployment-<hash> sh
+/usr/local/el_kube # bin/el_kube remote
 iex(el_kube@172.17.0.9)1> Node.list
 [:"el_kube@172.17.0.7", :"el_kube@172.17.0.8", :"el_kube@172.17.0.11", :"el_kube@172.17.0.10"]
 ```

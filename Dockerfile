@@ -1,18 +1,14 @@
-FROM elixir:1.9.0-alpine AS builder
+FROM elixir:1.9 AS builder
 
 ENV MIX_ENV=prod
 
 WORKDIR /usr/local/el_kube
 
 # This step installs all the build tools we'll need
-RUN apk update \
-    && apk upgrade --no-cache \
-    && apk add --no-cache \
-      nodejs-npm \
-      alpine-sdk \
-      openssl-dev \
-    && mix local.rebar --force \
-    && mix local.hex --force
+RUN curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
+    apt-get install -y nodejs && \
+    mix local.rebar --force && \
+    mix local.hex --force
 
 # Copies our app source code into the build container
 COPY . .
@@ -33,12 +29,7 @@ RUN mkdir -p /opt/release \
     && mv _build/${MIX_ENV}/rel/el_kube /opt/release
 
 # Create the runtime container
-FROM erlang:22-alpine as runtime
-
-# Install runtime dependencies
-RUN apk update \
-    && apk upgrade --no-cache \
-    && apk add --no-cache gcc
+FROM erlang:22 as runtime
 
 WORKDIR /usr/local/el_kube
 

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: el-kube-public
+spec:
+  ports:
+  - name: http
+    port: 4000
+  selector:
+    app: el-kube
+  type: LoadBalancer
