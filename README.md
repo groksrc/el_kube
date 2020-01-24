@@ -453,7 +453,7 @@ spec:
           - name: SECRET_KEY_BASE
             value: super-secret-key-base
           - name: SERVICE_NAME
-            value: el-kube.default.svc.cluster.local
+            value: el-kube-private.default.svc.cluster.local
         resources: {}
         securityContext:
           privileged: false
